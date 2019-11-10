@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="http://www.jq22.com/jquery/jquery-1.10.2.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){alert(12);
+         $.ajax({
+                    url:"http://127.0.0.1:8000",
+                    dataType: "json",
+                    success:function(data){
+                        console.log(data);
+                        console.log(222222222222222);
+                    },
+                    error:function(){
+                        alert(22);
+                    }
+                })
+        })
+    </script>
+</head>
+<body>
+<p>hello html</p>
+</body>
+</html>
