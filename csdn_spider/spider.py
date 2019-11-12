@@ -12,7 +12,7 @@ import requests
 from scrapy import Selector
 from datetime import datetime
 
-from csdn_spider.models import Topic
+from csdn_spider.models import Topic, Answer
 
 domain="https://bbs.csdn.net"
 def get_nodes_json():
@@ -59,14 +59,45 @@ def get_last_urls():
 
 def parse_topic(url):
     #获取帖子的详情以及回复
+    topic_id=url.split("/")[-1]
     res_text=requests.get(url).text
     sel=Selector(text=res_text)
     all_divs=sel.xpath("//div[starts-with(@id,'post-')]")
     topic_item=all_divs[0]
-    content=topic_item.xpath(".//div[@class='post_body postbody_min_h']").extract()[0]
-    praised_nums=topic_item.xpath(".//label[@class='red_praise digg']/text()").extract()[0]
-    jtl=topic_item.xpath(".//div[@class='close_topic']/text()").extract()[0]
-    pass
+    content=topic_item.xpath(".//div[@class='post_body post_body_min_h']").extract()[0]
+    praised_nums=topic_item.xpath(".//label[@class='red_praise digg']//em/text()").extract()[0]
+    jtl_str=topic_item.xpath(".//div[@class='close_topic']/text()").extract()[0]
+    jtl=0
+    jtl_match=re.search("(\d+)%",jtl_str)
+    if jtl_match:
+        jtl=int(jtl_match.group(1))
+    existed_topics = Topic.select().where(Topic.id == topic_id)
+    if existed_topics:
+        topic=existed_topics[0]
+        topic.content=content
+        topic.jtl=jtl
+        topic.praised_nums=praised_nums
+        topic.save()
+
+    for answer_item in all_divs[1:]:
+        answer=Answer()
+        answer.topic_id=topic_id
+        author_info=answer_item.xpath(".//div[@class='nick_name']//a[1]/@href").extract()[0]
+        author_id=author_info.split("/")[-1]
+        create_time=answer_item.xpath(".//label[@class='date_time']/text()").extract()[0]
+        create_time=datetime.strptime(create_time,'%Y-%m-%d %H:%M:%S')
+        answer.author=author_id
+        answer.create_time=create_time
+        praised_nums=int(topic_item.xpath(".//label[@class='red_praise digg']//em/text()").extract()[0])
+        answer.parised_nums=praised_nums
+        content=topic_item.xpath(".//div[@class='post_body post_body_min_h']/text()").extract()[0]
+        answer.content=content
+        answer.save()
+    next_page=sel.xpath("//a[@class='pageliststy next_page']/@href").extract()
+    if next_page:
+       next_page=parse.urljoin(domain,next_page[0])
+       parse_topic(next_page)
+
 
 def parse_author(url):
     pass
