@@ -12,7 +12,7 @@ import requests
 from scrapy import Selector
 from datetime import datetime
 
-from csdn_spider.models import Topic, Answer
+from csdn_spider.models import Topic, Answer, Author
 
 domain="https://bbs.csdn.net"
 def get_nodes_json():
@@ -91,8 +91,17 @@ def parse_topic(url):
         praised_nums=int(topic_item.xpath(".//label[@class='red_praise digg']//em/text()").extract()[0])
         answer.parised_nums=praised_nums
         content=topic_item.xpath(".//div[@class='post_body post_body_min_h']/text()").extract()[0]
+        answer_id = topic_item.xpath("//div[@class='mod_topic_wrap post topic']/@data-post-id").extract()[0]
+        answer.id=answer_id
         answer.content=content
-        answer.save()
+        existed_answer = Answer.select().where(Answer.id == answer_id)
+        # print(answer_id)
+        # print(url)
+        if existed_answer:
+            answer.save()
+        else:
+            answer.save(force_insert=True)
+
     next_page=sel.xpath("//a[@class='pageliststy next_page']/@href").extract()
     if next_page:
        next_page=parse.urljoin(domain,next_page[0])
@@ -100,9 +109,65 @@ def parse_topic(url):
 
 
 def parse_author(url):
-    pass
+    # url='https://me.csdn.net/blog/ojc8882003'
+    author_id=url.split("/")[-1]
+    #获取用户的详情
+    headers={
+        'User-Agent': 'Mozilla / 5.0(Windows NT 6.1;Win64;x64) AppleWebKit / 537.36(KHTML, likeGecko) Chrome / 74.0.3729.108Safari / 537.36'
+    }
+    res_text=requests.get(url,headers=headers).text
+    sel=Selector(text=res_text)
+    author=Author()
+    author.id=author_id
+    all_li_strs=sel.xpath("//ul[@class='me_chanel_list clearfix']/li/a/label/span[2]/text()").extract()
+    if all_li_strs:
+        click_nums=all_li_strs[0]
+        if len(all_li_strs)>1:
+            original_nums = all_li_strs[1]
+        else:
+            original_nums=0
+        if len(all_li_strs) > 2:
+            forward_nums = all_li_strs[2]
+        else:
+            forward_nums = 0
+        if len(all_li_strs) > 3:
+            rate = all_li_strs[3]
+        else:
+            rate = 0
+        author.click_nums = click_nums
+        author.original_nums = original_nums
+        author.forward_nums = forward_nums
+        author.rate = rate
+    answer_nums=1
+    parised_nums=1
 
+    author.answer_nums=answer_nums
+    author.parised_nums=parised_nums
+    desc=sel.xpath("//div[@class='description_detail']/text()").extract()
 
+    username = ""
+    if sel.xpath("//p[@class='lt_title']/text()").extract():
+        username = sel.xpath("//p[@class='lt_title']/text()").extract()[2].strip()
+    author.name=username
+    if desc:
+        author.desc=desc
+    # person_b = sel.xpath("//div[@class='job clearfix']/p/text()").extract()
+    # for item in person_b:
+    #     item_text="".join(item.extract())
+    #     if "csdnc-m-add" in item_text:
+    #         location=item.xpath(".//span/text()").extract()[0]
+    #     else:
+    #         industry=item.xpath(".//span/text()").extract()[0]
+    location = sel.xpath("//div[@class='job clearfix']/p/text()").extract()[0].strip()
+    author.location=location
+    industry = sel.xpath("//div[@class='description clearfix']/p/text()").extract()[0].strip()
+    author.industry=industry
+
+    existed_author=Author.select().where(Author.id==author_id)
+    if existed_author:
+        author.save()
+    else:
+        author.save(force_insert=True)
 
 def parse_list(url):
     res_text=requests.get(url).text
@@ -117,7 +182,11 @@ def parse_list(url):
         if tr.xpath(".//td[2]/em/text()").extract():
             score = tr.xpath(".//td[2]/em/text()").extract()[0]
             topic.score = int(score)
-        topic_url = parse.urljoin(domain,tr.xpath(".//td[3]/a/@href").extract()[0])
+        print(tr)
+        topic_url =""
+        if tr.xpath(".//td[3]/a/@href").extract():
+            topic_url= parse.urljoin(domain,tr.xpath(".//td[3]/a/@href").extract()[0])
+        print(topic_url)
         topic_title = tr.xpath(".//td[3]/a/text()").extract()[0]
         author_url = parse.urljoin(domain,tr.xpath(".//td[4]/a/@href").extract()[0])
         author_id = author_url.split("/")[-1]
@@ -142,19 +211,20 @@ def parse_list(url):
             topic.save()
         else:
             topic.save(force_insert=True)
-        parse_topic(topic_url)
+        if topic_url!="":
+            parse_topic(topic_url)
         parse_author(author_url)
 
-        # next_page=sel.xpath("//a[@class='pageliststy next_page']/@href").extract()
-        # if next_page:
-        #     next_page=parse.urljoin(domain,next_page[0])
-        #     parse_list(next_page)
+    next_page=sel.xpath("//a[@class='pageliststy next_page']/@href").extract()
+    if next_page:
+        next_page=parse.urljoin(domain,next_page[0])
+        parse_list(next_page)
 if  __name__ == "__main__":
     last_urls=get_last_urls()
-    print(last_urls)
+    # print(last_urls)
     for url in last_urls:
          parse_list(url)
-
+    # parse_author("")
 
 
 
