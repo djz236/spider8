@@ -219,6 +219,7 @@ def parse_list(url):
     if next_page:
         next_page=parse.urljoin(domain,next_page[0])
         parse_list(next_page)
+
 if  __name__ == "__main__":
     last_urls=get_last_urls()
     # print(last_urls)
