@@ -137,7 +137,7 @@ class ParseAuthorThread(Thread):
                 'User-Agent': 'Mozilla / 5.0(Windows NT 6.1;Win64;x64) AppleWebKit / 537.36(KHTML, likeGecko) Chrome / 74.0.3729.108Safari / 537.36'
             }
             res_text = requests.get(url, headers=headers).text
-            sel = Selector(text=res_text)
+            sel = Selector(text=res_text) 
             author = Author()
             author.id = author_id
             all_li_strs = sel.xpath("//ul[@class='me_chanel_list clearfix']/li/a/label/span[2]/text()").extract()
