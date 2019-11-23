@@ -1,6 +1,6 @@
 from peewee import *
 from datetime import date
-db=MySQLDatabase("spider",host="192.168.43.200",port=3306,user="root",password="root")
+db=MySQLDatabase("spider",host="127.0.0.1",port=3306,user="root",password="root")
 
 class BaseModedel(Model):
     class Meta:
@@ -20,6 +20,8 @@ class Topic(BaseModedel):
     score=IntegerField(default=0)#赏分
     status=CharField()#状态
     last_answer_time=DateTimeField()
+    url=CharField()
+    add_time=DateTimeField()
 
 class Answer(BaseModedel):
     topic_id=IntegerField()
@@ -27,7 +29,8 @@ class Answer(BaseModedel):
     content=TextField(default="")
     create_time=DateTimeField()
     parised_nums=IntegerField(default=0)#点赞数量
-    
+    url = CharField()
+    add_time = DateTimeField()
    
 class Author(BaseModedel): 
     name=CharField()
@@ -43,7 +46,8 @@ class Author(BaseModedel):
     location=CharField(null=True)
     follower_nums=IntegerField(default=0)#粉丝数
     following_nums=IntegerField(default=0)#关注数
-
+    url=CharField()
+    add_time=DateTimeField()
 
 if __name__ == "__main__":
     db.create_tables([Topic,Answer,Author])

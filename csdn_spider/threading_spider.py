@@ -67,7 +67,6 @@ class ParseTopicDetailThread(Thread):
             except IndexError as e:
                 time.sleep(1)
                 continue
-
             print("开始获取帖子：{}".format(url))
             # 获取帖子的详情以及回复
             topic_id = url.split("/")[-1]
@@ -105,6 +104,8 @@ class ParseTopicDetailThread(Thread):
                 answer_id = topic_item.xpath("//div[@class='mod_topic_wrap post topic']/@data-post-id").extract()[0]
                 answer.id = answer_id
                 answer.content = content
+                answer.url = url
+                answer.add_time = datetime.now()
                 existed_answer = Answer.select().where(Answer.id == answer_id)
                 # print(answer_id)
                 # print(url)
@@ -172,6 +173,8 @@ class ParseAuthorThread(Thread):
                 author.desc = desc
             location = sel.xpath("//div[@class='job clearfix']/p/text()").extract()[0].strip()
             author.location = location
+            author.url=url
+            author.add_time= datetime.now()
             industry = sel.xpath("//div[@class='description clearfix']/p/text()").extract()[0].strip()
             author.industry = industry
             existed_author = Author.select().where(Author.id == author_id)
@@ -192,7 +195,11 @@ class ParseTopicListThread(Thread):
             # for uu in topic_list_urls:
             #     print(uu)
             print("开始获取帖子列表页：{}".format(url))
-            res_text=requests.get(url).text
+            try:
+
+                res_text=requests.get(url).text
+            except Exception as e:
+                print(url)
             sel=Selector(text=res_text)
             all_trs=sel.xpath("//table[@class='forums_tab_table']/tbody//tr")[4:]
             for tr in all_trs:
@@ -239,6 +246,8 @@ class ParseTopicListThread(Thread):
                     last_time=datetime.strptime(last_time_str,"%Y-%m-%d %H:%M")
                     topic.last_answer_time = last_time
                 topic.id=int(topic_url.split("/")[-1])
+                topic.add_time= datetime.now()
+                topic.url=url
                 existed_topics=Topic.select().where(Topic.id==topic.id)
                 if existed_topics:
                     topic.save()
@@ -258,8 +267,12 @@ class ParseTopicListThread(Thread):
 if __name__=="__main__":
     last_urls=get_last_urls()
     for url in last_urls:
-        topic_list_urls.append(url)
+        if "ios" in url:
+            topic_list_urls.append(url)
+        else:
+            continue
 
+    print(topic_list_urls)
     top_list_thread=ParseTopicListThread()
     top_detail_thread=ParseTopicDetailThread()
     author_thread=ParseAuthorThread()
